@@ -1,0 +1,57 @@
+From 16b50e2693e035e049b4b3770d17db15228ad2e0 Mon Sep 17 00:00:00 2001
+From: Nigel Heap <nigel.c.heap@gmail.com>
+Date: Wed, 9 Jun 2021 00:56:57 +1000
+Subject: [PATCH] Stop double save of group content
+
+---
+ src/Entity/GroupContent.php | 20 ++++++++++++++++++--
+ 1 file changed, 18 insertions(+), 2 deletions(-)
+
+diff --git a/src/Entity/GroupContent.php b/src/Entity/GroupContent.php
+index 75583e5..78f331f 100644
+--- a/src/Entity/GroupContent.php
++++ b/src/Entity/GroupContent.php
+@@ -185,7 +185,10 @@ class GroupContent extends ContentEntityBase implements GroupContentInterface {
+       // flush some caches containing the entity or perform other operations we
+       // cannot possibly know about. Lucky for us, all of that behavior usually
+       // happens when saving an entity so let's re-save the added entity.
+-      $this->getEntity()->save();
++      $entity = $this->getEntity();
++      $storage = \Drupal::entityTypeManager()->getStorage($entity->getEntityTypeId());
++      $entity->original = $storage->loadUnchanged($entity->id());
++      $entity->postSave($storage);
+     }
+ 
+     // If a membership gets updated, but the member's roles haven't changed, we
+@@ -220,7 +223,9 @@ class GroupContent extends ContentEntityBase implements GroupContentInterface {
+         // trying to save an entity that just got deleted and triggered the
+         // deletion of its group content entities.
+         // @todo Revisit when https://www.drupal.org/node/2754399 lands.
+-        $entity->save();
++        $storage = \Drupal::entityTypeManager()->getStorage($entity->getEntityTypeId());
++        $entity->original = $storage->loadUnchanged($entity->id());
++        $entity->postSave($storage);
+ 
+         // If a membership gets deleted, we need to reset the internal group
+         // roles cache for the member in that group, but only if the user still
+@@ -234,6 +239,17 @@ class GroupContent extends ContentEntityBase implements GroupContentInterface {
+     }
+   }
+ 
++  /**
++   * {@inheritdoc}
++   */
++  public function getCacheTags() {
++    if ($entity = $this->getEntity()) {
++      $this->addCacheableDependency($entity);
++    }
++
++    return parent::getCacheTags();
++  }
++
+   /**
+    * {@inheritdoc}
+    */
+-- 
+2.30.1 (Apple Git-130)
+

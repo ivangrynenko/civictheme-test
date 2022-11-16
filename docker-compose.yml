@@ -1,0 +1,103 @@
+version: '2.3'
+
+# This value intentionally matches the project name on Lagoon.
+# It is used to name the CLI_IMAGE to use as a build arg locally.
+x-lagoon-project: &lagoon-project
+  civictest
+
+x-lagoon-local-dev-url: &lagoon-local-dev-url
+  http://civictest.docker.amazee.io
+
+x-image-version: &image-version
+  ${IMAGE_VERSION:-latest}
+
+x-volumes:
+  &default-volumes
+    # Define all volumes you would like to have real-time mounted into the docker containers
+    volumes:
+      - .:/app:delegated
+
+x-environment: &default-environment
+  LAGOON_ENVIRONMENT_TYPE: ${LAGOON_ENVIRONMENT_TYPE:-}
+  LAGOON_PROJECT: *lagoon-project
+  LAGOON_ROUTE: &default-url ${LOCALDEV_URL:-http://civictest.docker.amazee.io}
+  IMAGE_VERSION: ${IMAGE_VERSION:-latest}
+  XDEBUG_ENABLE: ${XDEBUG_ENABLE:-}
+
+volumes:
+  files:
+    {}
+
+services:
+
+  cli:
+    build:
+      context: .
+      dockerfile: .docker/Dockerfile.cli
+      args:
+        IMAGE_VERSION: *image-version
+    image: *lagoon-project
+    labels:
+      lagoon.type: cli-persistent
+      lagoon.persistent.name: nginx
+      lagoon.persistent: /app/web/sites/default/files/
+      lando.type: php-cli
+    << : *default-volumes
+    environment:
+      << : *default-environment
+    # Mount volumes from Pygmy to inject host SSH key into container.
+    # https://pygmy.readthedocs.io/en/master/ssh_agent/
+    volumes_from: ### Local overrides to mount host SSH keys. Automatically removed in CI.
+      - container:amazeeio-ssh-agent ### Local overrides to mount host SSH keys. Automatically removed in CI.
+
+  nginx:
+    build:
+      context: .
+      dockerfile: .docker/Dockerfile.nginx
+      args:
+        CLI_IMAGE: *lagoon-project
+        IMAGE_VERSION: *image-version
+    labels:
+      lagoon.type: nginx-php-persistent
+      lagoon.persistent: /app/web/sites/default/files/
+      lando.type: nginx
+    << : *default-volumes
+    depends_on:
+      - cli
+    environment:
+      << : *default-environment
+      LAGOON_LOCALDEV_URL: *default-url
+    networks:
+      - amazeeio-network
+      - default
+
+  php:
+    build:
+      context: .
+      dockerfile: .docker/Dockerfile.php
+      args:
+        CLI_IMAGE: *lagoon-project
+        IMAGE_VERSION: *image-version
+    labels:
+      lagoon.type: nginx-php-persistent
+      lagoon.name: nginx
+      lagoon.persistent: /app/web/sites/default/files/
+      lando.type: php-fpm
+    << : *default-volumes
+    depends_on:
+      - cli
+    environment:
+      << : *default-environment
+
+  mariadb:
+    image: uselagoon/mariadb-10.5-drupal:latest
+    labels:
+      lagoon.type: mariadb
+    ports:
+      - "3306" # Find port on host with `docker-compose port mariadb 3306`
+    environment:
+      << : *default-environment
+
+networks:
+  amazeeio-network:
+    external: true

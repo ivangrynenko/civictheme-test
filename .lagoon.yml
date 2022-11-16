@@ -1,0 +1,27 @@
+docker-compose-yaml: docker-compose.yml
+
+api: https://api.salsa.hosting/graphql
+ssh: ssh.salsa.hosting:22
+
+project: civictest
+
+tasks:
+  pre-rollout:
+    - run:
+        name: run custom pre-rollout tasks
+        command: ahoy my pre-rollout
+        service: cli
+
+  post-rollout:
+    - run:
+        name: run custom post-rollout tasks
+        command: ahoy my post-rollout
+        service: cli
+
+environments:
+  production:
+    cronjobs:
+      - name: drush cron
+        schedule: "15 1 * * *"
+        command: drush cron
+        service: cli

@@ -1,0 +1,22 @@
+---
+ahoyapi: v2
+usage: Project specific ahoy commands.
+
+commands:
+  help:
+    cmd: |
+      echo
+      echo -e "\033[0;32mCustom Ahoy commands\033[0m"
+      echo -e "You may add custom commands to \033[0;32mcustom/ahoy.yml\033[0m to share with developers in your project."
+      echo -e "Type \`\033[0;32mahoy my\033[0m\` for a list of custom commmands."
+      echo
+
+  pre-rollout:
+    usage: Run commands for pre-rollout tasks.
+    cmd: echo "** PREROLL"
+
+  post-rollout:
+    usage: Run commands for post-rollout tasks.
+    cmd: |
+      echo "** POSTROLL"
+      sh /app/.docker/scripts/deploy.sh

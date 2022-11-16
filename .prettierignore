@@ -1,0 +1,8 @@
+# Dependencies.
+node_modules/
+vendor/
+
+
+# Ignore CSS files.
+*.css
+*.yml

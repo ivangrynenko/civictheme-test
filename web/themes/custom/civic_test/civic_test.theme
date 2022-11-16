@@ -1,0 +1,57 @@
+<?php
+
+/**
+ * @file
+ * Template for Civictheme test theme.
+ */
+
+use Drupal\Core\Site\Settings;
+use Drupal\views\ViewExecutable;
+use Drupal\paragraphs\Entity\Paragraph;
+
+/**
+ * Implements template_preprocess_html().
+ */
+function civic_test_preprocess_html(&$variables) {
+  _civic_test_preprocess_admin_toolbar($variables);
+}
+
+/**
+ * Preprocess admin toolbar.
+ */
+function _civic_test_preprocess_admin_toolbar(&$variables) {
+  // Hide admin toolbar.
+  if (Settings::get('hide_admin_toolbar')) {
+    if (!empty($variables['attributes']['class'])) {
+      unset($variables['page_top']['toolbar']);
+      $variables['attributes']['class'] = array_filter($variables['attributes']['class'], function ($value) {
+        return strpos($value, 'toolbar-') !== 0;
+      });
+    }
+  }
+}
+
+/**
+ * Implements hook_civictheme_listing_preprocess_view_alter().
+ */
+function civic_test_civictheme_listing_preprocess_view_alter(array &$settings, ViewExecutable &$view) {
+  if ($view->id() === 'civictheme_listing_examples' && $view->getDisplay()->display['id'] === 'civictheme_listing_page') {
+    $settings['title'] = '';
+    $settings['theme'] = 'light';
+    $settings['card_theme'] = 'dark';
+    $settings['with_background'] = TRUE;
+    $settings['vertical_space'] = 'bottom';
+  }
+}
+
+/**
+ * Implements hook_civictheme_listing_preprocess_view_alter().
+ */
+function civic_test_civictheme_listing_view_name_alter(string &$view_name, string &$display_id, Paragraph $paragraph) {
+  // This is an example.
+  if ($paragraph->hasField('field_c_p_content_type') && !$paragraph->get('field_c_p_content_type')->isEmpty()) {
+    if ($paragraph->get('field_c_p_content_type')->getString() == 'civictheme_event') {
+      [$view_name, $display_id] = explode('__', 'civictheme_listing_examples__block1');
+    }
+  }
+}
